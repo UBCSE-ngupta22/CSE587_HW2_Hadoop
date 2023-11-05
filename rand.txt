@@ -1,0 +1,1 @@
+hadoop jar wc.jar WordCount /user/ngupta22/wordcount/input /user/ngupta22/wordcount/output
