@@ -3,6 +3,8 @@ import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.Map;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -22,13 +24,19 @@ public class WordCountExt {
     private final static IntWritable one = new IntWritable(1);
     private Text word = new Text();
 
-
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 
       StringTokenizer itr = new StringTokenizer(value.toString());
+
+      String stopWordsReg = "\\b(?:a|an|the|in|my|has|as|if|do|have|had|on|at|of|for|by|with|to|up|down|and|or|not|but|is|am|are|was|were|be|being|been|it|this|that|these|those|I|me|myself|we|us|our|ours|you|your|yours|he|him|his|she|her|hers|it's|its|they|them|their|theirs|what|which|who|whom|whose|here|there|when|where|why|how|all|any|both|each|few|more|most|other|some|such|no|nor|not|only|own|same|so|than|too|very|s|t|can|will|just|don|should|now)\\b";
+
       while (itr.hasMoreTokens()) {
         String strTrimmed = itr.nextToken().replaceAll("\\p{P}","").toLowerCase();
-        word.set(strTrimmed);
+        Pattern pattern = Pattern.compile(stopWordsReg, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(strTrimmed);
+        String resultStr = matcher.replaceAll("");
+        resultStr = resultStr.replaceAll("\\s+", " ").trim();
+        word.set(resultStr);
         context.write(word, one);
       }
     }
@@ -56,6 +64,10 @@ public class WordCountExt {
 
       list.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
 
+      if (!list.isEmpty()) {
+          list.remove(0);
+      }
+      
       int count = 0;
       for (Map.Entry<Text, Integer> entry : list) {
           context.write(entry.getKey(), new IntWritable(entry.getValue()));
@@ -71,7 +83,7 @@ public class WordCountExt {
   public static void main(String[] args) throws Exception {
     Configuration conf = new Configuration();
     Job job = Job.getInstance(conf, "word count Extended");
-    job.setJarByClass(WordCount.class);
+    job.setJarByClass(WordCountExt.class);
     job.setMapperClass(TokenizerMapper.class);
     job.setReducerClass(IntSumReducer.class);
     job.setOutputKeyClass(Text.class);
